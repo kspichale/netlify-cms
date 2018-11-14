@@ -1,3 +1,4 @@
+/* eslint-disable no-dupe-keys */
 import AJV from 'ajv';
 import ajvErrors from 'ajv-errors';
 import { formatExtensions, frontmatterFormats, extensionFormatters } from 'Formats/formats';
@@ -112,26 +113,51 @@ const getConfigSchema = () => ({
           },
           else: { required: ['format'] },
         },
+
+        // If `identifier_field` is set, require a field by that name to be
+        // configured for the collection. Otherwise, require a field name from
+        // `IDENTIFIER_FIELDS` internal constant.
+        if: {
+          required: ['folder', 'identifier_field'],
+        },
+        then: {
+          errorMessage: 'must have a field named ${0/identifier_field}',
+          properties: {
+            fields: {
+              contains: {
+                properties: {
+                  name: {
+                    const: { $data: '3/identifier_field' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        else: {
+          dependencies: {
+            folder: {
+              errorMessage: 'must have a field that is a valid entry identifier',
+              properties: {
+                fields: {
+                  contains: {
+                    properties: {
+                      name: {
+                        enum: IDENTIFIER_FIELDS,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
         dependencies: {
           frontmatter_delimiter: {
             properties: {
               format: { enum: frontmatterFormats },
             },
             required: ['format'],
-          },
-          folder: {
-            errorMessage: {
-              _: 'must have a field that is a valid entry identifier',
-            },
-            properties: {
-              fields: {
-                contains: {
-                  properties: {
-                    name: { enum: [{ $data: '3/identifier_field' }, ...IDENTIFIER_FIELDS] },
-                  },
-                },
-              },
-            },
           },
         },
       },
